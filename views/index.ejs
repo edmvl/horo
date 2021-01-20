@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <% for(var i=0; i<horos.length;i++) {%>
+    <div>
+      <h1><%=signes[horos[i][1]].rus %></h1>
+      <p><%=horos[i][2] %></p>
+      <hr>
+    </div>
+    <%} %>
+
+  </body>
+</html>

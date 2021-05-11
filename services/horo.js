@@ -1,4 +1,4 @@
-const sqlite = require('sqlite-sync');
+const {Horo} = require('../models');
 const request = require('request');
 const cheerio = require('cheerio');
 
@@ -19,29 +19,23 @@ class Horoscope {
     };
 
     constructor() {
-        sqlite.connect('./horo.db');
-        sqlite.run(`
-            CREATE TABLE IF NOT EXISTS horo (
-                date TEXT NOT NULL,
-                sign TEXT NOT NULL,
-                text TEXT NOT NULL
-            );
-        `, (res) => {
-            console.log(res)
-        });
+        Horo.sync();
     }
 
     updateHoros() {
         for (let sign in this.signes) {
             request(
                 'https://horo.mail.ru/prediction/' + sign + '/today',
-                (err, response, body) => {
+                async (err, response, body) => {
                     const $ = cheerio.load(body);
                     const text = $('.article__item').text();
                     const date = new Date().toLocaleDateString();
-                    if (this.getActualHoro(sign, date).length === 0) {
-                        sqlite.insert('horo', {date: date, sign: sign, text: text}, (res) => {
-                            console.log(res);
+                    const actualHoro = await this.getActualHoro(sign, date);
+                    if (actualHoro.length === 0) {
+                        Horo.create({
+                            date,
+                            sign,
+                            text
                         })
                     }
                 }
@@ -49,18 +43,21 @@ class Horoscope {
         }
     }
 
-    getActualHoro(sign = null, inDate = null) {
-        const date = inDate || new Date().toLocaleDateString();
-        let statement = `
-          SELECT * FROM horo 
-          WHERE date='${date}'
-        `;
-        if (sign) {
-            statement += ` AND sign='${sign}'`;
+    async getActualHoro(sign = null, inDate = null) {
+        let where = {
+            date: inDate || new Date().toLocaleDateString()
         }
-        statement += ";";
-        var rows = sqlite.run(statement);
-        return rows.length > 0 ? rows[0].values : [];
+        if (sign) {
+            where.sign = sign;
+        }
+        const res = await Horo.findAll({
+            where
+        });
+        let horos = [];
+        for (let i = 0; i < res.length; i++) {
+            horos.push(res[i].dataValues)
+        }
+        return horos;
     }
 }
 
